@@ -1,0 +1,40 @@
+prefix =  ../OUT/output1 
+model =  Linear 
+Processing GWiS file :  ../OUT/output1.chr1.GWiS.Linear.txt 
+Processing Vegas file :  ../OUT/output1.chr1.Vegas.Linear.txt 
+Processing Bimbam file :  ../OUT/output1.chr1.BF.Linear.txt 
+Processing Gates file :  ../OUT/output1.chr1.Gates.Linear.txt 
+Processing minSNP file :  ../OUT/output1.chr1.minSNP.Linear.txt 
+Processing minSNP_Gene file :  ../OUT/output1.chr1.minSNP_Gene.Linear.txt 
+Processing allSNP file :  ../OUT/output1.chr1.allSNP.Linear.txt 
+Processing GWiS file :  ../OUT/output1.chr2.GWiS.Linear.txt 
+Processing Vegas file :  ../OUT/output1.chr2.Vegas.Linear.txt 
+Processing Bimbam file :  ../OUT/output1.chr2.BF.Linear.txt 
+Processing Gates file :  ../OUT/output1.chr2.Gates.Linear.txt 
+Processing minSNP file :  ../OUT/output1.chr2.minSNP.Linear.txt 
+Processing minSNP_Gene file :  ../OUT/output1.chr2.minSNP_Gene.Linear.txt 
+Processing allSNP file :  ../OUT/output1.chr2.allSNP.Linear.txt 
+Plotting with jpeg
+null device 
+          1 
+Plotting with jpeg
+null device 
+          1 
+Plotting with jpeg
+null device 
+          1 
+Plotting with jpeg
+null device 
+          1 
+Plotting with jpeg
+null device 
+          1 
+Plotting with jpeg
+null device 
+          1 
+Plotting with jpeg
+null device 
+          1 
+> proc.time()
+   user  system elapsed 
+  0.899   0.073   2.049 

@@ -1,0 +1,4 @@
+Omitting snp null1_202 with snp->eSampleSize=0.999750 <= N_HAT_CUTOFF=5
+Omitting snp null2_49 with snp->eSampleSize=2.997750 <= N_HAT_CUTOFF=5
+Omitting snp null3_206 with snp->eSampleSize=3.996000 <= N_HAT_CUTOFF=5
+Omitting snp null3_248 with snp->eSampleSize=0.999750 <= N_HAT_CUTOFF=5

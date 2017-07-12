@@ -1,0 +1,2 @@
+Omitting snp null2_11 with maf=0.0095 <= maf_cutoff=0.01
+Omitting snp null2_32 with maf=0.0015 <= maf_cutoff=0.01

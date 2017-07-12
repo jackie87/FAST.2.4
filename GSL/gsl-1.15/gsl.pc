@@ -1,0 +1,11 @@
+prefix=/Users/jiananzhan/Desktop/Rotation_in_JSB_lab/FAST.1.8.mc/GSL/GSL_install
+exec_prefix=/Users/jiananzhan/Desktop/Rotation_in_JSB_lab/FAST.1.8.mc/GSL/GSL_install
+libdir=/Users/jiananzhan/Desktop/Rotation_in_JSB_lab/FAST.1.8.mc/GSL/GSL_install/lib
+includedir=/Users/jiananzhan/Desktop/Rotation_in_JSB_lab/FAST.1.8.mc/GSL/GSL_install/include
+GSL_CBLAS_LIB=-lgslcblas
+
+Name: GSL
+Description: GNU Scientific Library
+Version: 1.15
+Libs: -L/Users/jiananzhan/Desktop/Rotation_in_JSB_lab/FAST.1.8.mc/GSL/GSL_install/lib -lgsl ${GSL_CBLAS_LIB}  -lm 
+Cflags: -I/Users/jiananzhan/Desktop/Rotation_in_JSB_lab/FAST.1.8.mc/GSL/GSL_install/include

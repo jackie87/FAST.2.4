@@ -1,0 +1,22 @@
+SYNOPSIS
+getReport.pl will generate a summary report file, named report.txt, from the FAST output.  
+
+OUTPUT
+The output of getReport.pl is a list of genes that reach the significance threshold specified in the command line parameters.  A gene will be reported if it has significant p value from at least one of the FAST methods.  This list is followed by a list of significant SNPs in the non-transcribed regions.  getReport.pl reports all available results from the FAST output files.
+
+USAGE
+getReport.pl takes 4 parameters. 
+./getReport.pl <file name> <model> <p value cut off for gene> < p value cut off for SNP>
+<file name>:  the prefix of the FAST output files (The default output is FAST.result).  
+<model>: The model used in FAST, either "Linear" or "Logistic".
+<p value cut off for gene>: p value cut off for gene-based tests.  If permutation is not performed, this will be the percentage of 'significant' genes, ranked by the test statistics.
+<p value cut off for SNP>: p value cut off for SNP-based tests.  If permutation is not performed, this will be the percentage of 'significant' genes, ranked by the test statistics.
+
+EXAMPLE
+
+The following example takes the FAST default output files using the linear model, and reports genes that have gene-based p value < 0.01 and SNP-based p value < 0.001.
+
+Examples : 
+./getReport.pl ../../Example/OUT/output Linear 0.01 0.001
+./getReport.pl ../../Example/OUT/output Logistic 0.01 0.001
+./getReport.pl ../../Example/OUT/output Summary 0.01 0.001
