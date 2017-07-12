@@ -2,18 +2,18 @@ PROGRAM: FAST
 
 DESCRIPTION: Gene based whole-genome association analysis toolset
 
-AUTHOR: Pritam chanda
+AUTHOR: Jianan Zhan
 
-CONTACT: pchanda2@jhmi.edu
+CONTACT: jianan.zhan@jhu.edu
 
-YEAR: 2013
+YEAR: 2017
 
 LICENSE: Released under GNU General Public License, v2 (see License.txt)
 
 
 PREREQUISITES: GNU Scientific Library (GSL) is required to compile and use FAST. 
 We have provided a copy of the GSL software in the GSL directory 
-FAST.1.6.mc/GSL/gsl-1.15.tar.gz. GSL can also be downloaded from 
+FAST.2.2.mc/GSL/gsl-1.15.tar.gz. GSL can also be downloaded from 
 http://www.gnu.org/software/gsl/. Please unzip the .tar.gz file, it should 
 create directory gsl-1.15. Please read the file INSTALL to install GSL, or follow 
 the steps outlined in https://bitbucket.org/baderlab/fast/wiki/installGSL.
@@ -23,7 +23,7 @@ Linux x86_64 in the bin directory (FAST.1.6.mc/bin/) of the software.
 
 For Linux
 ---------
-The binary located at FAST.1.6.mc/bin/linux_x86_64/FAST is statically compiled 
+The binary located at FAST.2.2.mc/bin/linux_x86_64/FAST is statically compiled 
 meaning you should be able to run it just by ./FAST <options> without installing GSL. 
 If you cannot run it, you need to install GSL and compile FAST. 
 Please follow the instructions below for compilation.
@@ -45,7 +45,7 @@ type "make clean" and then "make".
   within GSL directory, or follow the steps in 
   https://bitbucket.org/baderlab/fast/wiki/installGSL.
 - Once GSL is installed, download FAST and decompress the archive. Go to 
-  the software home directory FAST.1.6.mc and type make clean and then type make. 
+  the software home directory FAST.2.2.mc and type make clean and then type make. 
   This should compile the code to produce a binary for the appropriate platform. 
 - Next run : ./install.sh. 
 - The final executable is named FAST. Type ./FAST --help to see all the options.
