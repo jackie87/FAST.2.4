@@ -54,6 +54,7 @@
 #define MAX_FILENAME_LEN 200
 #define MAX_INCLUDED_SNP 200 //
 #define MAX_PL_INCLUDED_SNP 40000 // Jianan added for PL, to differiate between the previous constant; PL usually envolves more SNPs
+#define MAX_SNP_FOR_COR 100000 //Jianan added, to calculate phenotype correlations
 #define MAX_N_INDIV 20000
 //#define MAX_N_INDIV_NO_PHENO 2000
 #define MAX_LINE_WIDTH 120000

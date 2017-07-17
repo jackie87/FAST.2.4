@@ -3350,7 +3350,7 @@ SNP* readSNP_SUMMARY_simple(C_QUEUE * snp_queue, struct hashtable * snp_pos_tabl
   return NULL;
 }
 
-SNP* readSNP_PL_SUMMARY(C_QUEUE * snp_queue, FILE * fp_frq, int npheno, double ** PL_beta, double ** PL_se, int curSNP_id, int ** PL_nsample, PAR * par){
+SNP* readSNP_PL_SUMMARY(C_QUEUE * snp_queue, FILE * fp_frq, int npheno, double ** PL_beta, double ** PL_se, int curSNP_id, int ** PL_nsample, PAR * par, double ** SNP_betas, int * PL_cor_SNP_count){
   static char sline_frq_pl[MAX_LINE_WIDTH];
   static char a1_pl, a2_pl;
   static char snp_id_pl[SNP_ID_LEN];
@@ -3362,6 +3362,7 @@ SNP* readSNP_PL_SUMMARY(C_QUEUE * snp_queue, FILE * fp_frq, int npheno, double *
   int status;
   int i;
   double min_pval = 1.0;
+  
   double pval;
   bool found_sig_snp = false;
 
@@ -3388,13 +3389,19 @@ SNP* readSNP_PL_SUMMARY(C_QUEUE * snp_queue, FILE * fp_frq, int npheno, double *
       pch = strtok(NULL, " \t");
       status = sscanf(pch, "%lg", &PL_se[i][curSNP_id]);
       pch = strtok(NULL, " \t");
-      status = scanf(pch, "%lg", &pval);
+      status = sscanf(pch, "%lg", &pval);
       if(pval<min_pval)
 	min_pval = pval;
     }
     if(min_pval<=par->sappho_min_pval){
       found_sig_snp = true;
       break;
+    }
+    if(min_pval>0.5 && *PL_cor_SNP_count<MAX_SNP_FOR_COR){
+      for(i=0;i<npheno;i++){
+	SNP_betas[i][*PL_cor_SNP_count] = PL_beta[i][curSNP_id];
+      }
+      PL_cor_SNP_count[0]++;
     }
   }
   if(!found_sig_snp)
@@ -3418,7 +3425,7 @@ SNP* readSNP_PL_SUMMARY(C_QUEUE * snp_queue, FILE * fp_frq, int npheno, double *
   return snp;
 }
 
-SNP* readSNP_PL_SUMMARY_simple(C_QUEUE * snp_queue, FILE * fp_frq, int npheno, double ** PL_beta, double ** PL_se, int curSNP_id, int * PL_sample_simple, PAR * par){
+SNP* readSNP_PL_SUMMARY_simple(C_QUEUE * snp_queue, FILE * fp_frq, int npheno, double ** PL_beta, double ** PL_se, int curSNP_id, int * PL_sample_simple, PAR * par, double ** SNP_betas, int * PL_cor_SNP_count){
   static char sline_frq_pl[MAX_LINE_WIDTH];
   static char a1_pl, a2_pl;
   static char snp_id_pl[SNP_ID_LEN];
@@ -3453,13 +3460,19 @@ SNP* readSNP_PL_SUMMARY_simple(C_QUEUE * snp_queue, FILE * fp_frq, int npheno, d
       pch = strtok(NULL, " \t");
       status = sscanf(pch, "%lg", &PL_se[i][curSNP_id]);
       pch = strtok(NULL, " \t");
-      status = scanf(pch, "%lg", &pval);
+      status = sscanf(pch, "%lg", &pval);
       if(pval<min_pval)
 	min_pval = pval;
     }
     if(min_pval<=par->sappho_min_pval){
       found_sig_snp = true;
       break;
+    }
+    if(min_pval>0.5 && *PL_cor_SNP_count<MAX_SNP_FOR_COR){
+      for(i=0;i<npheno;i++){
+	SNP_betas[i][*PL_cor_SNP_count] = PL_beta[i][curSNP_id];
+      }
+      PL_cor_SNP_count[0]++;
     }
   }
   if(!found_sig_snp)
@@ -11821,9 +11834,6 @@ void init_sapphoI_state(SAPPHOI_STATE * sapphoI_state, PLEIOPHENOTYPE * pleiophe
     pheno_var[k] = pleiophenotype->tss_per_n[k];
     sapphoI_state->RSS[0]+=log(pheno_var[k]);
   }
-
-  
-
 }
 
 void init_sapphoC_state(SAPPHOC_STATE * sapphoC_state, PLEIOPHENOTYPE * pleiophenotype, int nSNPs, SAPPHOC_WORKSPACE * sapphoC_workspace, double ** geno_zm, PAR par){
@@ -13521,7 +13531,7 @@ void getsapphoCDelOneModel(int n_pheno, int nsample, int ** PL_nsample, int * PL
   }
 }
 
-void calPheno_cov(gsl_matrix * pheno_var_cov, double ** PL_beta, double ** PL_se, int ** PL_nsample, int * PL_nsample_simple, SNP** gene_SNPs, int npheno, int nSNPs){
+void calPheno_cov(gsl_matrix * pheno_var_cov, double ** PL_beta, double ** PL_se, int ** PL_nsample, int * PL_nsample_simple, SNP** gene_SNPs, int npheno, int nSNPs, double ** SNP_betas, int PL_cor_SNP_count){
   gsl_vector *v = gsl_vector_alloc(nSNPs);
   int i,j;
   double geno_tss,yy;
@@ -13544,6 +13554,18 @@ void calPheno_cov(gsl_matrix * pheno_var_cov, double ** PL_beta, double ** PL_se
     gsl_matrix_set(pheno_var_cov, i, i, gsl_stats_median_from_sorted_data(v->data, 1, v->size));
   }
   gsl_vector_free(v);
+  
+  if(PL_cor_SNP_count<MAX_SNP_FOR_COR)
+    printf("Not enough data to calculate phenotype correlations. Need %d, read in %d\n", MAX_SNP_FOR_COR, PL_cor_SNP_count);
+  
+  double cor;
+  for(i=1;i<npheno;i++){
+    for(j=0;j<i;j++){
+      cor = correlation(SNP_betas[i], SNP_betas[j], PL_cor_SNP_count, false, false);
+      gsl_matrix_set(pheno_var_cov, i, j, cor*sqrt(gsl_matrix_get(pheno_var_cov, i, i))*sqrt(gsl_matrix_get(pheno_var_cov, j, j)));
+      gsl_matrix_set(pheno_var_cov, j, i, gsl_matrix_get(pheno_var_cov, i, j));
+    }
+  }
 }
 
 void readPheno_cov(gsl_matrix * pheno_var_cov, FILE * fp_pheno_var, int n_pheno, char (*pheno_names)[PHENO_NAME_LEN]){
@@ -13873,7 +13895,7 @@ void readGeno_cov(double ** geno_cov, double ** pheno_geno_cov, FILE * fp_ld, FI
   }
 }
 
-void init_sapphoC_state_Summary(SAPPHOC_STATE * sapphoC_state, SAPPHOC_WORKSPACE * sapphoC_workspace, SNP **gene_SNPs, double ** PL_beta, double ** PL_se, int nSNPs, int n_pheno, int nsample, FILE * fp_ld, FILE * fp_allele_info, FILE * fp_pheno_var, FILE * fp_hap,  char (*pheno_names)[PHENO_NAME_LEN], int ** PL_nsample, int * PL_nsample_simple, int ncols, PAR par){
+void init_sapphoC_state_Summary(SAPPHOC_STATE * sapphoC_state, SAPPHOC_WORKSPACE * sapphoC_workspace, SNP **gene_SNPs, double ** PL_beta, double ** PL_se, int nSNPs, int n_pheno, int nsample, FILE * fp_ld, FILE * fp_allele_info, FILE * fp_pheno_var, FILE * fp_hap,  char (*pheno_names)[PHENO_NAME_LEN], int ** PL_nsample, int * PL_nsample_simple, int ncols, PAR par, double ** SNP_betas, int PL_cor_SNP_count){
   int k,i,j;
   double det;
   
@@ -13942,7 +13964,7 @@ void init_sapphoC_state_Summary(SAPPHOC_STATE * sapphoC_state, SAPPHOC_WORKSPACE
   if(!ESTIMATE_PHENO_VAR)
     readPheno_cov(sapphoC_workspace->pheno_var_cov, fp_pheno_var, n_pheno, pheno_names);
   else
-    calPheno_cov(sapphoC_workspace->pheno_var_cov, PL_beta, PL_se, PL_nsample, PL_nsample_simple, gene_SNPs, n_pheno, nSNPs);
+    calPheno_cov(sapphoC_workspace->pheno_var_cov, PL_beta, PL_se, PL_nsample, PL_nsample_simple, gene_SNPs, n_pheno, nSNPs, SNP_betas, PL_cor_SNP_count);
   
   det = calDeterminant(sapphoC_workspace->pheno_var_cov, sapphoC_workspace->LU, sapphoC_workspace->p_calDet);
   sapphoC_state->RSS[0]=det;
@@ -13963,7 +13985,7 @@ void init_sapphoC_state_Summary(SAPPHOC_STATE * sapphoC_state, SAPPHOC_WORKSPACE
   
 }
 
-void init_sapphoI_state_Summary(SAPPHOI_STATE * sapphoI_state, SAPPHOI_WORKSPACE * sapphoI_workspace, SNP **gene_SNPs, double ** PL_beta, double ** PL_se, int nSNPs, int n_pheno, int nsample, FILE * fp_ld, FILE * fp_allele_info, FILE * fp_pheno_var, FILE * fp_hap,  char (*pheno_names)[PHENO_NAME_LEN], int ** PL_nsample, int * PL_nsample_simple, int ncols, PAR par){
+void init_sapphoI_state_Summary(SAPPHOI_STATE * sapphoI_state, SAPPHOI_WORKSPACE * sapphoI_workspace, SNP **gene_SNPs, double ** PL_beta, double ** PL_se, int nSNPs, int n_pheno, int nsample, FILE * fp_ld, FILE * fp_allele_info, FILE * fp_pheno_var, FILE * fp_hap,  char (*pheno_names)[PHENO_NAME_LEN], int ** PL_nsample, int * PL_nsample_simple, int ncols, PAR par, double ** SNP_betas, int PL_cor_SNP_count){
   int k, i, j;
 
   sapphoI_state->iSNP=0;
@@ -14009,7 +14031,7 @@ void init_sapphoI_state_Summary(SAPPHOI_STATE * sapphoI_state, SAPPHOI_WORKSPACE
   if(!ESTIMATE_PHENO_VAR)
     readPheno_cov(pheno_var_cov, fp_pheno_var, n_pheno, pheno_names);
   else
-    calPheno_cov(pheno_var_cov, PL_beta, PL_se, PL_nsample, PL_nsample_simple, gene_SNPs, n_pheno, nSNPs);
+    calPheno_cov(pheno_var_cov, PL_beta, PL_se, PL_nsample, PL_nsample_simple, gene_SNPs, n_pheno, nSNPs, SNP_betas, PL_cor_SNP_count);
 
   sapphoI_workspace->pheno_var = (double*)malloc(sizeof(double)*n_pheno);
   sapphoI_workspace->pheno_var_orig = (double*)malloc(sizeof(double)*n_pheno);
@@ -14084,7 +14106,7 @@ void estimate_N_pleiotropy(int ** PL_nsample, int * PL_nsample_simple, int nphen
   gsl_vector_free(v);
 }
 
-void runsapphoI_Summary(C_QUEUE *snp_queue, GENE * gene, OUTFILE outfile, double ** PL_beta, double ** PL_se, int npheno, int *par_nsample, FILE * fp_ld, FILE * fp_allele_info, FILE * fp_pheno_var, FILE * fp_hap, int ** PL_nsample, int * PL_nsample_simple, int ncols, PAR par){
+void runsapphoI_Summary(C_QUEUE *snp_queue, GENE * gene, OUTFILE outfile, double ** PL_beta, double ** PL_se, int npheno, int *par_nsample, FILE * fp_ld, FILE * fp_allele_info, FILE * fp_pheno_var, FILE * fp_hap, int ** PL_nsample, int * PL_nsample_simple, int ncols, PAR par, double ** SNP_betas, int PL_cor_SNP_count){
   FILE * fp_sapphoI_result = outfile.fp_sapphoI_linear;
   int nSNPs = gene->nSNP;
   SNP ** gene_SNPs;
@@ -14106,7 +14128,7 @@ void runsapphoI_Summary(C_QUEUE *snp_queue, GENE * gene, OUTFILE outfile, double
     estimate_N_pleiotropy(PL_nsample, PL_nsample_simple, npheno, nSNPs, par_nsample);
 
   int nsample = *par_nsample;
-  init_sapphoI_state_Summary(&sapphoI_state, &sapphoI_workspace, gene_SNPs, PL_beta, PL_se, nSNPs, npheno, nsample, fp_ld, fp_allele_info, fp_pheno_var, fp_hap, pheno_names, PL_nsample, PL_nsample_simple, ncols, par);
+  init_sapphoI_state_Summary(&sapphoI_state, &sapphoI_workspace, gene_SNPs, PL_beta, PL_se, nSNPs, npheno, nsample, fp_ld, fp_allele_info, fp_pheno_var, fp_hap, pheno_names, PL_nsample, PL_nsample_simple, ncols, par, SNP_betas, PL_cor_SNP_count);
   
   for(k=1;k<=gene->nSNP*npheno;k++){
     if(!calBestsapphoISNPSummary(npheno, PL_nsample, PL_nsample_simple, gene_SNPs, nSNPs, &sapphoI_state, k, &sapphoI_workspace))
@@ -14131,7 +14153,7 @@ void runsapphoI_Summary(C_QUEUE *snp_queue, GENE * gene, OUTFILE outfile, double
 }
 
 
-void runsapphoC_Summary(C_QUEUE *snp_queue, GENE * gene, OUTFILE outfile, double ** PL_beta, double ** PL_se, int npheno, int* par_nsample, FILE * fp_ld, FILE * fp_allele_info, FILE * fp_pheno_var, FILE * fp_hap, int ** PL_nsample, int * PL_nsample_simple, int ncols, PAR par){
+void runsapphoC_Summary(C_QUEUE *snp_queue, GENE * gene, OUTFILE outfile, double ** PL_beta, double ** PL_se, int npheno, int* par_nsample, FILE * fp_ld, FILE * fp_allele_info, FILE * fp_pheno_var, FILE * fp_hap, int ** PL_nsample, int * PL_nsample_simple, int ncols, PAR par, double ** SNP_betas, int PL_cor_SNP_count){
   FILE * fp_sapphoC_result = outfile.fp_sapphoC_linear;
   int nSNPs = gene->nSNP;
   SNP ** gene_SNPs;
@@ -14153,7 +14175,7 @@ void runsapphoC_Summary(C_QUEUE *snp_queue, GENE * gene, OUTFILE outfile, double
     estimate_N_pleiotropy(PL_nsample, PL_nsample_simple, npheno, nSNPs, par_nsample);
   
   int nsample = *par_nsample;
-  init_sapphoC_state_Summary(&sapphoC_state, &sapphoC_workspace, gene_SNPs, PL_beta, PL_se, nSNPs, npheno, nsample, fp_ld, fp_allele_info, fp_pheno_var, fp_hap, pheno_names, PL_nsample, PL_nsample_simple, ncols, par);
+  init_sapphoC_state_Summary(&sapphoC_state, &sapphoC_workspace, gene_SNPs, PL_beta, PL_se, nSNPs, npheno, nsample, fp_ld, fp_allele_info, fp_pheno_var, fp_hap, pheno_names, PL_nsample, PL_nsample_simple, ncols, par, SNP_betas, PL_cor_SNP_count);
 
   for(k=1;k<=gene->nSNP*npheno;k++){
     if(!calBestsapphoCSNP(npheno, nsample, PL_nsample, PL_nsample_simple, gene_SNPs, nSNPs, &sapphoC_state, k, &sapphoC_workspace))
@@ -14227,6 +14249,9 @@ void runsapphoC(C_QUEUE *snp_queue, GENE * gene, PLEIOPHENOTYPE * pleiophenotype
   int ** PL_nsample;
   int * PL_nsample_simple;
 
+  PL_nsample = (int**)malloc(sizeof(int*));
+  PL_nsample_simple = (int*)malloc(sizeof(int));
+
   for(k=1;k<=gene->nSNP*n_pheno;k++){
   //for(k=1;k<=72;k++){
     if(!calBestsapphoCSNP(pleiophenotype->n_pheno, pleiophenotype->N_sample, PL_nsample, PL_nsample_simple, gene_SNPs, nSNPs, &sapphoC_state, k, &sapphoC_workspace))
@@ -14248,6 +14273,8 @@ void runsapphoC(C_QUEUE *snp_queue, GENE * gene, PLEIOPHENOTYPE * pleiophenotype
   }
 
   clear_sapphoC_state(&sapphoC_state, &sapphoC_workspace, n_pheno, nSNPs);
+  free(PL_nsample);
+  free(PL_nsample_simple);
   free(gene_SNPs);gene_SNPs = NULL;
 }
 
@@ -15449,15 +15476,21 @@ int main(int nARG, char *ARGV[]){
   double ** PL_se;
   int ** PL_nsample;
   int * PL_nsample_simple;
-
+  double ** SNP_betas;
+  int PL_cor_SNP_count = 0;
+  
   if(GET_PLEIOTROPY && SUMMARY){
     //will use arrays for the time being; have to change to queue to account for memory issue
     int i;
     PL_beta = (double**)malloc(sizeof(double*)*par.npheno);
     PL_se = (double**)malloc(sizeof(double*)*par.npheno);
+    if(ESTIMATE_PHENO_VAR)
+      SNP_betas = (double**)malloc(sizeof(double)*par.npheno);
     for(i=0;i<par.npheno;i++){
       PL_beta[i] = (double*)malloc(sizeof(double)*MAX_PL_INCLUDED_SNP);
       PL_se[i] = (double*)malloc(sizeof(double)*MAX_PL_INCLUDED_SNP);
+      if(ESTIMATE_PHENO_VAR)
+	SNP_betas[i] = (double*)malloc(sizeof(double)*MAX_SNP_FOR_COR);
     }
     if(!SIMPLE_PL){
       PL_nsample = (int**)malloc(sizeof(int*)*par.npheno);
@@ -15483,9 +15516,9 @@ int main(int nARG, char *ARGV[]){
 	  curSNP = readSNP_SUMMARY_simple(snp_queue, snp_pos_table , fp_frq, &snp_cnt,phenotype->N_sample,phenotype->tss_per_n);
       }else{
 	if(SIMPLE_PL)
-	  curSNP = readSNP_PL_SUMMARY_simple(snp_queue, fp_frq, par.npheno, PL_beta, PL_se, curSNP_id, PL_nsample_simple, &par);
+	  curSNP = readSNP_PL_SUMMARY_simple(snp_queue, fp_frq, par.npheno, PL_beta, PL_se, curSNP_id, PL_nsample_simple, &par, SNP_betas, &PL_cor_SNP_count);
 	else
-	  curSNP = readSNP_PL_SUMMARY(snp_queue, fp_frq, par.npheno, PL_beta, PL_se, curSNP_id, PL_nsample, &par);
+	  curSNP = readSNP_PL_SUMMARY(snp_queue, fp_frq, par.npheno, PL_beta, PL_se, curSNP_id, PL_nsample, &par, SNP_betas, &PL_cor_SNP_count);
       }
     }
 
@@ -15917,22 +15950,26 @@ int main(int nARG, char *ARGV[]){
 	    if(!SUMMARY)
 	      runsapphoI(snp_queue, readyGene[i], pleiophenotype, outfile, par);
 	    else
-	      runsapphoI_Summary(snp_queue, readyGene[i], outfile, PL_beta, PL_se, par.npheno, &par.n_sample, fp_ld, fp_allele_info, fp_pheno_var, fp_hap, PL_nsample, PL_nsample_simple, ncols, par);	    
+	      runsapphoI_Summary(snp_queue, readyGene[i], outfile, PL_beta, PL_se, par.npheno, &par.n_sample, fp_ld, fp_allele_info, fp_pheno_var, fp_hap, PL_nsample, PL_nsample_simple, ncols, par, SNP_betas, PL_cor_SNP_count);
 	  }
 	  if(GET_SAPPHOC){
 	    if(!SUMMARY)
 	      runsapphoC(snp_queue, readyGene[i], pleiophenotype, outfile, par);
 	    else
-	      runsapphoC_Summary(snp_queue, readyGene[i], outfile, PL_beta, PL_se, par.npheno, &par.n_sample, fp_ld, fp_allele_info, fp_pheno_var, fp_hap, PL_nsample, PL_nsample_simple, ncols, par);	    
+	      runsapphoC_Summary(snp_queue, readyGene[i], outfile, PL_beta, PL_se, par.npheno, &par.n_sample, fp_ld, fp_allele_info, fp_pheno_var, fp_hap, PL_nsample, PL_nsample_simple, ncols, par, SNP_betas, PL_cor_SNP_count);	    
 	  }
 	  if(SUMMARY){
 	    int i;
 	    for(i=0;i<par.npheno;i++){
 	      free(PL_beta[i]);
 	      free(PL_se[i]);
+	      if(ESTIMATE_PHENO_VAR)
+		free(SNP_betas[i]);
 	    }
 	    free(PL_beta);
 	    free(PL_se);
+	    if(ESTIMATE_PHENO_VAR)
+		free(SNP_betas);
 	    if(!SIMPLE_PL){
 	      for(i=0;i<par.npheno;i++){
 		free(PL_nsample[i]);
