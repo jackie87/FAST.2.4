@@ -3527,7 +3527,7 @@ SNP* readSNP_SUMMARY(C_QUEUE * snp_queue, struct hashtable * snp_pos_table, FILE
       printf("-Error in line : %s \n", sline_frq);
       exit(1);
     }
-    //printf("Read %s\n",snp_id);
+    printf("Read %s\n",snp_id);fflush(stdout);
     snp1_info = hashtable_search(snp_pos_table, snp_id);
     if(snp1_info == NULL)
     {
@@ -13608,7 +13608,7 @@ void readGeno_cov(double ** geno_cov, double ** pheno_geno_cov, FILE * fp_ld, FI
   int count_samples;
   double double_count_samples;
   double geno_covariance;
-  
+
   //  if(COMPUTE_LD){
   if(!COMPUTE_LD){
     i=0;
@@ -13724,7 +13724,9 @@ void readGeno_cov(double ** geno_cov, double ** pheno_geno_cov, FILE * fp_ld, FI
       i=0;
       while(feof(fp_ld)==0 && fgets(sline_ld_geno, MAX_LINE_WIDTH, fp_ld)!=NULL){
 	status = sscanf(sline_ld_geno, "%d %d %s %d %d %s %lg",&chr1, &pos1, snp1_id, &chr2, &pos2, snp2_id, &geno_covariance);
-	if(chr1<=gene_SNPs[i]->chr && pos1< gene_SNPs[i]->bp)// data is ahead
+	if(chr1<gene_SNPs[i]->chr)// data is ahead
+	  continue;
+	if(chr1==gene_SNPs[i]->chr && pos1< gene_SNPs[i]->bp)// data is ahead
 	  continue;
 	while((chr1==gene_SNPs[i]->chr && pos1>gene_SNPs[i]->bp)||chr1>gene_SNPs[i]->chr){// file is ahead
 	  i++;	    
@@ -13744,7 +13746,10 @@ void readGeno_cov(double ** geno_cov, double ** pheno_geno_cov, FILE * fp_ld, FI
 	    break;
 	  }
 	}
+	if(j>nSNPs-1)
+	  continue;
 	if(strcmp(gene_SNPs[i]->name, snp1_id)==0 && strcmp(gene_SNPs[j]->name, snp2_id)==0){
+	  //printf("nSNP is %d i is %d j is %d\n", nSNPs,i,j);fflush(stdout);
 	  if(SIMPLE_PL){
 	    sum=0;
 	    for(k=0;k<n_pheno;k++){
@@ -13763,7 +13768,7 @@ void readGeno_cov(double ** geno_cov, double ** pheno_geno_cov, FILE * fp_ld, FI
 	    geno_cov[j][i]=geno_cov[i][j];	    
 	  }
 	}
-      } 
+      }
     }
     /*
     else{
@@ -14109,6 +14114,7 @@ void estimate_N_pleiotropy(int ** PL_nsample, int * PL_nsample_simple, int nphen
 void runsapphoI_Summary(C_QUEUE *snp_queue, GENE * gene, OUTFILE outfile, double ** PL_beta, double ** PL_se, int npheno, int *par_nsample, FILE * fp_ld, FILE * fp_allele_info, FILE * fp_pheno_var, FILE * fp_hap, int ** PL_nsample, int * PL_nsample_simple, int ncols, PAR par, double ** SNP_betas, int PL_cor_SNP_count){
   FILE * fp_sapphoI_result = outfile.fp_sapphoI_linear;
   int nSNPs = gene->nSNP;
+  //  printf("number of SNP is %d\n", nSNPs);fflush(stdout);
   SNP ** gene_SNPs;
   int i,k;
   char pheno_names[npheno][PHENO_NAME_LEN];
@@ -14415,7 +14421,7 @@ void runsapphoI(C_QUEUE *snp_queue, GENE * gene, PLEIOPHENOTYPE * pleiophenotype
   init_sapphoI_state(&sapphoI_state, pleiophenotype, nSNPs, pheno_var, gene, par);
 
   for(k=1;k<=gene->nSNP*n_pheno;k++){
-  //for(k=1;k<=72;k++){
+    // for(k=1;k<=72;k++){
     //if(!calBestPLSNP(gene_SNPs, gene, pleiophenotype, &bic_pl_state, k, pheno_var_cov))
     if(!orthCalBestsapphoISNP(pleiophenotype, gene_SNPs, gene ,&sapphoI_state, k, pheno_var, geno_data, geno_red, pheno_data, pheno_red, geno_cov))
       break;
