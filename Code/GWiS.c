@@ -3359,9 +3359,9 @@ SNP* readSNP_PL_SUMMARY(C_QUEUE * snp_queue, FILE * fp_frq, int npheno, double *
   //static double N_pl;
   static int bp_pl;
   static SNP* snp = NULL;
-  int status;
   int i;
   double min_pval = 1.0;
+  int status=-1;
   
   double pval;
   bool found_sig_snp = false;
@@ -3369,6 +3369,8 @@ SNP* readSNP_PL_SUMMARY(C_QUEUE * snp_queue, FILE * fp_frq, int npheno, double *
   while(feof(fp_frq)==0 && fgets(sline_frq_pl, MAX_LINE_WIDTH, fp_frq)!=NULL){
     char * pch = strtok(sline_frq_pl, " \t");
     status = sscanf(pch, "%d", &chr_pl);
+    if(status==-1)
+      exit(1);
     pch = strtok(NULL, " \t");
     status = sscanf(pch, "%s", snp_id_pl);
     pch = strtok(NULL, " \t");
@@ -3433,15 +3435,17 @@ SNP* readSNP_PL_SUMMARY_simple(C_QUEUE * snp_queue, FILE * fp_frq, int npheno, d
   static double AF1_pl;
   static int bp_pl;
   static SNP* snp = NULL;
-  int status;
   int i;
   double min_pval = 1.0;
+  int status = -1;
   double pval;
   bool found_sig_snp = false;
 
   while(feof(fp_frq)==0 && fgets(sline_frq_pl, MAX_LINE_WIDTH, fp_frq)!=NULL){
     char * pch = strtok(sline_frq_pl, " \t");
     status = sscanf(pch, "%d", &chr_pl);
+    if(status==-1)
+      exit(1);
     pch = strtok(NULL, " \t");
     status = sscanf(pch, "%s", snp_id_pl);
     pch = strtok(NULL, " \t");
@@ -7783,12 +7787,12 @@ void print_help()
    printf("--indiv-file <fame>           : for mode=genotype, MANDATORY file containing individual ids\n");
    printf("--trait-file <trait>          : for mode=genotype, MANDATORY file having phenotype and optional covariates\n");    
    printf("--summary-file <fname>        : for mode=summary, MANDATORY input snp summary information file\n");
-   printf("--multipos-file <fname>       : for mode=summary, input file for snps mapped to muliple positions\n");
+   printf("--multipos-file <fname>       : for mode=summary, input file for snps mapped to muliple positions, not used for SAPPHO\n");
    printf("--hap-file <fname>            : for mode=summary, when computing LD on the fly, MANDATORY input haplotype file\n");
-   printf("--pos-file <fname>            : for mode=summary, when computing LD on the fly, MANDATORY input index file for haplotype start byte positions\n");
-   printf("--ld-file <fname>             : for mode=summary, when using pre-computed LD, MANDATORY file containing pairwise LD; notice that for single phenotype/pleiotropy this file has different format\n");
-   printf("--pheno-varcov-file <fname>   : for mode=summary, when running pleiotropy have to provide this file as input, which describes the variances and covariances of all phenotypes\n");
-   printf("--allele-file <fname>         : for mode=summary, when using pre-computed LD, MANDATORY file containing snp reference allele used in LD computation\n");
+   printf("--pos-file <fname>            : for mode=summary, when computing LD on the fly, MANDATORY input index file for haplotype start byte positions, not used for SAPPHO\n");
+   printf("--ld-file <fname>             : for mode=summary, when using pre-computed LD, MANDATORY file containing pairwise LD.\n");
+   printf("--pheno-varcov-file <fname>   : for mode=summary, when running SAPPHO methods, provide phenotype variance-covariance info\n");
+   printf("--allele-file <fname>         : for mode=summary, when using pre-computed LD, MANDATORY file containing snp reference allele used in LD computation for methods other than SAPPHO; NOT MANDATORY for SAPPHO\n");
    printf("---------------Other input options------------------------\n");
    printf("--chr <chr no>                : MANDATORY chromosome number for either mode, 1 - 22 for autosomes and 23 for chromosome-X\n");
    printf("--out-file <outfile>          : output files are prefixed with <outfile>, default = FAST.result\n");
@@ -7853,7 +7857,7 @@ void print_help()
    printf("------------------Other regression options------------------\n");
    //printf("--pleiotropy                  : pleiotropy regression with multiple phenotypes\n");
    printf("--sapphoC                     : sapphoC model for pleiotropy regression\n");
-   printf("--sapphoI                     : sapphoC model for pleiotropy regression\n");
+   printf("--sapphoI                     : sapphoI model for pleiotropy regression\n");
    printf("--cox-snp                     : single snp Cox Proportional Hazard test for all snps\n");
    printf("--cox-gene                    : gene-based Cox Proportional Hazard test for snps in gene\n");
    printf("******************End Help *******************************\n");
@@ -9606,7 +9610,7 @@ void coxfitmatrix(COXRESULT * coxResult, int maxiter,  double* time,   int* stat
 	     double** covar, double* offset, int* strata,   int method, double eps, 
 		  double toler, int nused, int nvar, double * snp_scales) {
   
-  int i,j,k, person;
+  int i,k, person;
   double  denom=0, zbeta, risk;
   double  temp, temp2;
   int     ndead;  /* number of death obs at a time point */
@@ -9861,7 +9865,6 @@ void coxfitmatrix(COXRESULT * coxResult, int maxiter,  double* time,   int* stat
 	u = 0;
       else
 	u = u/imat;
-      j=0;
       beta[0] = newbeta;
       newbeta = newbeta + u;
       if (newbeta > maxbeta) newbeta = maxbeta;
@@ -10885,7 +10888,7 @@ void coxfit6_original(int maxiter,  double* time,   int* status,
   double beta[nvar];
   for(i=0;i<nvar;i++)
     beta[i]=0;
-  double means[nvar];
+  //double means[nvar];
   double u[nvar];
   double loglik[2];
   double sctest[1];
@@ -10935,7 +10938,7 @@ void coxfit6_original(int maxiter,  double* time,   int* status,
       temp += weights[person] * covar[i][person];
     }
     temp /= temp2;
-    means[i] = temp;
+    //means[i] = temp;
     for (person=0; person<nused; person++) covar[i][person] -=temp;
     if (doscale==1) {  /* and also scale it */
       temp =0;
@@ -11812,7 +11815,7 @@ void init_sapphoI_state(SAPPHOI_STATE * sapphoI_state, PLEIOPHENOTYPE * pleiophe
   sapphoI_state->nSNP = (int*)malloc(sizeof(int)*pleiophenotype->n_pheno);
 
   for(k=0;k<n_pheno;k++)
-    sapphoI_state->nSNP[k]=0;
+    sapphoI_state->nSNP[k]=0;//number of SNPs for each phenotype
 
   sapphoI_state->associations = gsl_matrix_alloc(nSNPs, n_pheno);
   for(i=0;i<nSNPs;i++)
@@ -13055,7 +13058,14 @@ bool bestFitsapphoISNPSummary(int n_pheno, int ** PL_nsample, int * PL_nsample_s
       }
     }
   }
-  
+  /*
+  if(k_model>=300 && k_model<=319){
+    printf("best pheno_geno is %g and geno_cov is %g\n", pheno_geno_cov[result[1]][result[0]], geno_cov[result[1]][result[0]][result[0]]);
+    printf("pheno_var for step %d is %g\n",k_model, pheno_var[result[1]]);
+    printf("SSM for step %d is %g\n",k_model, *bestSSM);
+    printf("pheno_var for next round should be %g\n", pheno_var[result[1]]-*bestSSM);
+  }
+  */
   for(i=0;i<nSNPs;i++){
     if(gsl_matrix_get(sapphoI_state->associations, i, result[1])!=0 || i==result[0])
       continue;
@@ -13582,6 +13592,8 @@ void readPheno_cov(gsl_matrix * pheno_var_cov, FILE * fp_pheno_var, int n_pheno,
       if(!feof(fp_pheno_var)){
 	fgets(sline_pheno_var, MAX_LINE_WIDTH, fp_pheno_var);
 	status = sscanf(sline_pheno_var, "%s %s %lg", pheno_name1, pheno_name2, &pheno_cov);
+	if(status==-1)
+	  exit(1);
 	if(first){
 	  first = false;
 	  strcpy(*pheno_names, pheno_name1);
@@ -14017,17 +14029,17 @@ void init_sapphoI_state_Summary(SAPPHOI_STATE * sapphoI_state, SAPPHOI_WORKSPACE
   for(k=0;k<n_pheno;k++)
     sapphoI_state->nSNP[k]=0;
 
-  sapphoI_state->associations = gsl_matrix_alloc(nSNPs, n_pheno);
+  sapphoI_state->associations = gsl_matrix_alloc(nSNPs, n_pheno);//association is first SNP then pheno
   for(i=0;i<nSNPs;i++)
     for(j=0;j<n_pheno;j++)
       gsl_matrix_set(sapphoI_state->associations, i, j, 0);
 
-  sapphoI_state->patterns = (int*)malloc(sizeof(int)*nSNPs);
+  sapphoI_state->patterns = (int*)malloc(sizeof(int)*nSNPs);//pattern for each SNP
   for(k=0;k<nSNPs;k++){
     sapphoI_state->patterns[k]=0;
   }
 
-  sapphoI_state->correlated_SNPs = (int*)malloc(sizeof(int)*nSNPs);
+  sapphoI_state->correlated_SNPs = (int*)malloc(sizeof(int)*nSNPs);//correlate SNPs
   for(k=0;k<nSNPs;k++){
     sapphoI_state->correlated_SNPs[k]=0;
   }
@@ -14135,7 +14147,8 @@ void runsapphoI_Summary(C_QUEUE *snp_queue, GENE * gene, OUTFILE outfile, double
 
   int nsample = *par_nsample;
   init_sapphoI_state_Summary(&sapphoI_state, &sapphoI_workspace, gene_SNPs, PL_beta, PL_se, nSNPs, npheno, nsample, fp_ld, fp_allele_info, fp_pheno_var, fp_hap, pheno_names, PL_nsample, PL_nsample_simple, ncols, par, SNP_betas, PL_cor_SNP_count);
-  
+
+
   for(k=1;k<=gene->nSNP*npheno;k++){
     if(!calBestsapphoISNPSummary(npheno, PL_nsample, PL_nsample_simple, gene_SNPs, nSNPs, &sapphoI_state, k, &sapphoI_workspace))
       break;
@@ -14150,8 +14163,14 @@ void runsapphoI_Summary(C_QUEUE *snp_queue, GENE * gene, OUTFILE outfile, double
       fprintf(fp_sapphoI_result, "%s\t%d\t%d\t%s\t%s\t%g\t%g\t%d\t%g\t%g\t%s\tNA\n", sapphoI_state.bestSNP[k]->name,sapphoI_state.bestSNP[k]->chr,sapphoI_state.bestSNP[k]->bp, sapphoI_state.bestSNP[k]->A1, sapphoI_state.bestSNP[k]->A2, sapphoI_state.bestSNP[k]->MAF, sapphoI_state.bestSNP[k]->R2, k, sapphoI_state.RSS[k], sapphoI_state.BIC[k], pheno_names[sapphoI_state.pheno[k]]);
     }
   }else{
-    for(k=1;k<=sapphoI_state.iSNP;k++){
-      fprintf(fp_sapphoI_result, "%s\t%d\t%d\t%s\t%s\t%g\t%g\t%d\t%g\t%g\t%s\t%g\n", sapphoI_state.bestSNP[k]->name,sapphoI_state.bestSNP[k]->chr,sapphoI_state.bestSNP[k]->bp, sapphoI_state.bestSNP[k]->A1, sapphoI_state.bestSNP[k]->A2, sapphoI_state.bestSNP[k]->MAF, sapphoI_state.bestSNP[k]->R2, k, sapphoI_state.RSS[k], sapphoI_state.BIC[k], pheno_names[sapphoI_state.pheno[k]], SNP_diff[sapphoI_state.geno[k]]);
+    if(!ESTIMATE_PHENO_VAR){
+      for(k=1;k<=sapphoI_state.iSNP;k++){
+	fprintf(fp_sapphoI_result, "%s\t%d\t%d\t%s\t%s\t%g\t%g\t%d\t%g\t%g\t%s\t%g\n", sapphoI_state.bestSNP[k]->name,sapphoI_state.bestSNP[k]->chr,sapphoI_state.bestSNP[k]->bp, sapphoI_state.bestSNP[k]->A1, sapphoI_state.bestSNP[k]->A2, sapphoI_state.bestSNP[k]->MAF, sapphoI_state.bestSNP[k]->R2, k, sapphoI_state.RSS[k], sapphoI_state.BIC[k], pheno_names[sapphoI_state.pheno[k]], SNP_diff[sapphoI_state.geno[k]]);
+      }
+    }else{
+      for(k=1;k<=sapphoI_state.iSNP;k++){
+	fprintf(fp_sapphoI_result, "%s\t%d\t%d\t%s\t%s\t%g\t%g\t%d\t%g\t%g\t%d\t%g\n", sapphoI_state.bestSNP[k]->name,sapphoI_state.bestSNP[k]->chr,sapphoI_state.bestSNP[k]->bp, sapphoI_state.bestSNP[k]->A1, sapphoI_state.bestSNP[k]->A2, sapphoI_state.bestSNP[k]->MAF, sapphoI_state.bestSNP[k]->R2, k, sapphoI_state.RSS[k], sapphoI_state.BIC[k], sapphoI_state.pheno[k], SNP_diff[sapphoI_state.geno[k]]);
+      }
     }
   }
   clear_sapphoI_state_summary(&sapphoI_state, &sapphoI_workspace, npheno, nSNPs);
@@ -14467,7 +14486,7 @@ void runsapphoI(C_QUEUE *snp_queue, GENE * gene, PLEIOPHENOTYPE * pleiophenotype
 }
 
 
-//main function
+//main 
 int main(int nARG, char *ARGV[]){
   PAR par;
 
@@ -14979,7 +14998,8 @@ int main(int nARG, char *ARGV[]){
       char sline[MAX_LINE_WIDTH];
       fgets(sline, MAX_LINE_WIDTH, fp_frq);
       if(sline[0]!='#') {printf("-Header line missing in summary file, please add one starting with '#'\n");exit(1);}
-      
+ 
+      //printf("%s\n", sline);fflush(stdout);
       //find out if the summary file is in simple format : chr snp bp pval.
       int n_tok = count_tokens(sline);
       if(!GET_PLEIOTROPY){//Jianan_PL_sum
@@ -15337,14 +15357,14 @@ int main(int nARG, char *ARGV[]){
     if(SUMMARY)
       fprintf(outfile.fp_sapphoC_linear, "SNP.id\tChr\tPos\t\tNonCoded.Allele\tCoded.Allele\tSNP.maf\tSNP.qual\tK\t|Det(SIGMA)|\tSapphoScore\tPheno\tSapphoScoreDiff\n");
     else
-      fprintf(outfile.fp_sapphoC_linear, "SNP.id\tPos\t\tNonCoded.Allele\tCoded.Allele\tSNP.maf\tSNP.qual\tK\t|Det(SIGMA)|\tSapphoScore\tPheno\tSapphoScoreDiff\n");
+      fprintf(outfile.fp_sapphoC_linear, "SNP.id\tPos\tNonCoded.Allele\tCoded.Allele\tSNP.maf\tSNP.qual\tK\t|Det(SIGMA)|\tSapphoScore\tPheno\tSapphoScoreDiff\n");
   }//Header for pleiotropy
 
   if(GET_SAPPHOI){//Jianan_PL_sum
     if(SUMMARY)
       fprintf(outfile.fp_sapphoI_linear, "SNP.id\tChr\tPos\t\tNonCoded.Allele\tCoded.Allele\tSNP.maf\tSNP.qual\tK\tlog|Det(SIGMA)|\tSapphoScore\tPheno\tSapphoScoreDiff\n");
     else
-      fprintf(outfile.fp_sapphoI_linear, "SNP.id\tPos\t\tNonCoded.Allele\tCoded.Allele\tSNP.maf\tSNP.qual\tK\tlog|Det(SIGMA)|\tSapphoScore\tPheno\tSapphoScoreDiff\n");
+      fprintf(outfile.fp_sapphoI_linear, "SNP.id\tPos\tNonCoded.Allele\tCoded.Allele\tSNP.maf\tSNP.qual\tK\tlog|Det(SIGMA)|\tSapphoScore\tPheno\tSapphoScoreDiff\n");
   }//Header for pleiotropy
 
   if(GET_SINGLE_SNP_COX){
@@ -15955,8 +15975,9 @@ int main(int nARG, char *ARGV[]){
 	  if(GET_SAPPHOI){
 	    if(!SUMMARY)
 	      runsapphoI(snp_queue, readyGene[i], pleiophenotype, outfile, par);
-	    else
+	    else{
 	      runsapphoI_Summary(snp_queue, readyGene[i], outfile, PL_beta, PL_se, par.npheno, &par.n_sample, fp_ld, fp_allele_info, fp_pheno_var, fp_hap, PL_nsample, PL_nsample_simple, ncols, par, SNP_betas, PL_cor_SNP_count);
+	    }
 	  }
 	  if(GET_SAPPHOC){
 	    if(!SUMMARY)

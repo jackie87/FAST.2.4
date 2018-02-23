@@ -18,12 +18,11 @@ http://www.gnu.org/software/gsl/. Please unzip the .tar.gz file, it should
 create directory gsl-1.15. Please read the file INSTALL to install GSL, or follow 
 the steps outlined in https://bitbucket.org/baderlab/fast/wiki/installGSL.
 
-PRE-COMPILED BINARIES: We have provided pre-compiled binaries for Mac OSX and 
-Linux x86_64 in the bin directory (FAST.1.6.mc/bin/) of the software.
+PRE-COMPILED BINARIES: We have provided pre-compiled binaries for Linux x86_64 of the software.
 
 For Linux
 ---------
-The binary located at FAST.2.2.mc/bin/linux_x86_64/FAST is statically compiled 
+The binary located at FAST.2.4.mc/bin/linux_x86_64/FAST is statically compiled 
 meaning you should be able to run it just by ./FAST <options> without installing GSL. 
 If you cannot run it, you need to install GSL and compile FAST. 
 Please follow the instructions below for compilation.

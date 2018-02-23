@@ -1,2 +1,0 @@
-SNP.id	Chr	Pos	NonCoded.Allele	Coded.Allele	Beta	Se	Chi2	Log10BF	Coded.Af	Qual	ESampleSize	NGenes	Fmiss	Pval
-rs368695	1	158205161	G	T	2.63159e-05	0.00633291	1.72677e-05	-	0.732364	0.842	2931.08	0	0	0.996684
